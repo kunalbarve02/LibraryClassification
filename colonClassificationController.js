@@ -64,38 +64,37 @@ exports.generateColonClassification = async (req, res) => {
         yob
     } = req.body
 
-    // use relative string mapping
-    /*const checkBookQuery = `SELECT classNumber, bookNumber, ascensionNumber FROM Books WHERE title = $1`
-    const checkBookValues = [title]*/
+    const checkBookQuery = `SELECT classNumber, bookNumber, ascensionNumber FROM Books WHERE title = $1`
+    const checkBookValues = [title]
 
     const mainClassNumberQuery = `SELECT main_class_number,id FROM main_class_number_mapper WHERE subject LIKE $1`
     const mainClassNumberValues = [subject]
     try {
-        // tokenize title and subtitle
-        // const checkBookResult = await client.query(checkBookQuery,checkBookValues)
-        // if(checkBookResult.rowCount>0)
-        // {
-        //     return res.send({
-        //         classNumber : checkBookResult.rows[0].classNumber,
-        //         ascensionNumber: checkBookResult.rows[0].ascensionNumber,
-        //         bookNumber : checkBookResult.rows[0].bookNumber
-        //     })
-        // }
+        const checkBookResult = await client.query(checkBookQuery,checkBookValues)
+        if(checkBookResult.rowCount>0)
+        {
+            return res.send({
+                classNumber : checkBookResult.rows[0].classNumber,
+                ascensionNumber: checkBookResult.rows[0].ascensionNumber,
+                bookNumber : checkBookResult.rows[0].bookNumber
+            })
+        }
         const mainClassNumberResult = await client.query(mainClassNumberQuery, mainClassNumberValues)
-        console.log(title)
         //titleTokens = titleTokens.map(token => token.trim());
         const mainClassNumber = mainClassNumberResult.rows[0].class_number
         const classNumber = await getClassNumber(title, mainClassNumberResult.rows[0].id)
         const ascensionNumber = shortid.generate()
         const bookNumber = await getBookNumber(author, yop, yob)
+        let titleString = ""
+        title.map(t=>titleString+t.words)
 
-        /*await client.query('BEGIN')
+        await client.query('BEGIN')
         const bookInsertQuery = `INSERT INTO public.books
         (title, subtitle, author, publisher, yop, pop, editor, translator, illustrator, compiler, extractor, pagenos, isbn, "size", subject, format, yob, classnumber, booknumber, ascensionnumber)
         VALUES($1, $2 ,$3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20);
         `
         const bookInsertValues = [
-            title,
+            titleString,
             subTitle,
             author,
             publisher,
@@ -117,7 +116,7 @@ exports.generateColonClassification = async (req, res) => {
             ascensionNumber,
         ]
         await client.query(bookInsertQuery,bookInsertValues)
-        await client.query('COMMIT')*/
+        await client.query('COMMIT')
         res.send({
             mainClassNumber,
             classNumber,
@@ -126,7 +125,7 @@ exports.generateColonClassification = async (req, res) => {
         })
     }
     catch (err) {
-        //await client.query('ROLLBACK')
+        await client.query('ROLLBACK')
         console.log(err)
         res.status(500).send({
             message: 'Error generating colon classification'
