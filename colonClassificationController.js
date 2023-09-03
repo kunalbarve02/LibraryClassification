@@ -18,7 +18,10 @@ const getClassNumber = async (titles,mainClassId,) => {
         const searchResult = await client.query(query, [title.words, title.foci, mainClassId])
         titleResult.push(searchResult.rows[0])
       }
-      console.log(titleResult)
+      if(!titleResult)
+      {
+        return null;
+      }
       let formula = ['P','E','2P','2P2']
       const fociToClassNumbers = titleResult.reduce((map, item) => {
         if (!map[item.foci]) {
@@ -83,6 +86,10 @@ exports.generateColonClassification = async (req, res) => {
             })
         }
         const mainClassNumberResult = await client.query(mainClassNumberQuery, mainClassNumberValues)
+        if(mainClassNumberResult === null)
+        {
+          return res.status(404).send("No class number generated")
+        }
         //titleTokens = titleTokens.map(token => token.trim());
         const mainClassNumber = mainClassNumberResult.rows[0].class_number
         const classNumberResult = await getClassNumber(title, mainClassNumberResult.rows[0].id)
