@@ -10,24 +10,27 @@ const getClassNumber = async (titles,mainClassId,) => {
       AND LOWER(title) = LOWER($1)
     `;
     try {
+      let titleString = ""
       let titleResult = []
       for(const title of titles)
       {
+        titleString = titleString + title.words + " "
         const searchResult = await client.query(query, [title.words, title.foci, mainClassId])
         titleResult.push(searchResult.rows[0])
       }
+      console.log(titleResult)
       let formula = ['P','E','2P','2P2']
       const fociToClassNumbers = titleResult.reduce((map, item) => {
         if (!map[item.foci]) {
             map[item.foci] = [];
         }
-        map[item.foci].push(item.class_number);
+        map[item?.foci].push(item?.class_number);
         return map;
       }, {});
       
       // Iterate through the formula array and build the answer string
-      let answer = "T " + formula.map(focus => (fociToClassNumbers[focus] || []).join('')).join('');
-      return answer;
+      let classNumber = "T " + formula.map(focus => (fociToClassNumbers[focus] || []).join('')).join('');
+      return {classNumber,titleString};
     }
 
     catch (err) {
@@ -82,11 +85,9 @@ exports.generateColonClassification = async (req, res) => {
         const mainClassNumberResult = await client.query(mainClassNumberQuery, mainClassNumberValues)
         //titleTokens = titleTokens.map(token => token.trim());
         const mainClassNumber = mainClassNumberResult.rows[0].class_number
-        const classNumber = await getClassNumber(title, mainClassNumberResult.rows[0].id)
+        const classNumberResult = await getClassNumber(title, mainClassNumberResult.rows[0].id)
         const ascensionNumber = shortid.generate()
         const bookNumber = await getBookNumber(author, yop, yob)
-        let titleString = ""
-        title.map(t=>titleString+t.words)
 
         await client.query('BEGIN')
         const bookInsertQuery = `INSERT INTO public.books
@@ -94,7 +95,7 @@ exports.generateColonClassification = async (req, res) => {
         VALUES($1, $2 ,$3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20);
         `
         const bookInsertValues = [
-            titleString,
+            classNumberResult.titleString,
             subTitle,
             author,
             publisher,
@@ -111,7 +112,7 @@ exports.generateColonClassification = async (req, res) => {
             subject,
             format,
             yob,
-            classNumber,
+            classNumberResult.classNumber,
             bookNumber,
             ascensionNumber,
         ]
@@ -119,7 +120,7 @@ exports.generateColonClassification = async (req, res) => {
         await client.query('COMMIT')
         res.send({
             mainClassNumber,
-            classNumber,
+            classNumber: classNumberResult.classNumber,
             ascensionNumber,
             bookNumber
         })
