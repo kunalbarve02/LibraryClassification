@@ -18,14 +18,15 @@ const getClassNumber = async (titles,mainClassId,) => {
         const searchResult = await client.query(query, [title.words, title.foci, mainClassId])
         titleResult.push(searchResult.rows[0])
       }
+      console.log(titleResult)
       if(!titleResult)
       {
         return null;
       }
       let formula = ['P','E','2P','2P2']
       const fociToClassNumbers = titleResult.reduce((map, item) => {
-        if (!map[item.foci]) {
-            map[item.foci] = [];
+        if (!map[item?.foci]) {
+            map[item?.foci] = [];
         }
         map[item?.foci].push(item?.class_number);
         return map;
